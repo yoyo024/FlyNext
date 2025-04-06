@@ -1,0 +1,155 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  REGULAR_USER
+  HOTEL_OWNER
+}
+
+// PRICE RANGE IN hotel is deleted, we can use filter by searchign all the prices and then check lower and upper bound
+
+enum ItineraryType {
+  FLIGHT_ONEWAY
+  FLIGHT_ROUNDTRIP
+  HOTEL_RESERVATION
+  ONEWAY_AND_HOTEL
+  ROUNDTRIP_AND_HOTEL
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELED
+}
+
+enum InvoiceStatus {
+  PAID
+  REFUNDED // includes partial refunding
+}
+
+model City {
+  city    String @id
+  country String
+}
+
+model Airport {
+  id      String @id
+  code    String @unique
+  name    String
+  city    String
+  country String
+}
+
+model User {
+  id             Int            @id @default(autoincrement())
+  firstName      String
+  lastName       String
+  email          String         @unique
+  password       String
+  phoneNumber    String?
+  profilePicture Json?
+  role           Role
+  bookings       Booking[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  Notification   Notification[]
+}
+
+model Hotel {
+  id           Int            @id @default(autoincrement())
+  name         String
+  logo         String?
+  address      String
+  city     String
+  starRating   Int
+  images       Json
+  ownerId      Int // user Id
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  rooms        Room[]
+}
+
+model Room {
+  id            Int       @id @default(autoincrement())
+  type          String
+  amenities     Json
+  pricePerNight Float
+  images        Json
+  hotelId       Int
+  hotel         Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  bookings      Booking[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Booking {
+  id        Int           @id @default(autoincrement())
+  userId    Int
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  itinerary ItineraryType
+  hotelCost Float?
+  checkIn   DateTime?
+  checkOut  DateTime?
+  roomId    Int?
+  room      Room?         @relation(fields: [roomId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  bookRef   String?
+  ticketNum String?
+  flights   Flight[]      @relation("FlightBooking")
+  reserveTime DateTime?
+  status    BookingStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  invoice Invoice?
+}
+
+model Notification {
+  id        Int           @id @default(autoincrement())
+  userId    Int
+  message   String
+  isRead    Boolean  @default(false)
+
+  user      User   @relation(fields: [userId], references: [id], onUpdate: Cascade)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model Flight {
+  flightId      String    @id
+  flightNum     String
+  departureTime DateTime
+  arrivalTime   DateTime
+  flightCost    Float     @default(0)
+  origin        String
+  destination   String
+  airline       String
+  bookings      Booking[] @relation("FlightBooking")
+}
+
+
+model Invoice {
+  id          Int      @id @default(autoincrement())
+  bookingId   Int      @unique // Each booking has one invoice
+  userId      Int
+  hotelCost    Float  
+  flightCost   Float
+  refundAmount Float? @default(0) // Amount refunded
+  currency    String   // hotel currency always CAD
+  status      InvoiceStatus   
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}

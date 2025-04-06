@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:13
+    container_name: flynext-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: aHFCISDiMNNDdbWBFRFsGSCFHYzQUthF
+      POSTGRES_DB: railway
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - "DATABASE_URL=postgresql://postgres:aHFCISDiMNNDdbWBFRFsGSCFHYzQUthF@gondola.proxy.rlwy.net:22682/railway"
+    volumes:
+      - ./prisma:/app/prisma
+      - ./package.json:/app/package.json
+      - ./src:/app/src
+volumes:
+  pgdata:

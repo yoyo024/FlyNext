@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" 
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int    @id @default(autoincrement())
+  firstName      String
+  lastName       String
+  email          String @unique
+  phoneNumber    String?
+  profilePicture String? // url to picture
+  role           Role   
+  hotels         Hotel[] @relation("HotelOwner")
+  bookings       Booking[]
+  paymentCards   PaymentCard[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Hotel {
+  id            Int       @id @default(autoincrement())
+  name          String
+  logo          String?   // url to logo picture
+  address       String
+  location      String
+  starRating    Float     
+  images        String[]  // urls for hotel images
+  priceRange    Float
+  ownerId       Int
+  owner         User      @relation("HotelOwner", fields: [ownerId], references: [id])
+  rooms         Room[]
+  bookings      Booking[]
+  availableRooms Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Room {
+  id              Int      @id @default(autoincrement())
+  name            String   // twin, double, suite, etc.
+  amenities       String[]
+  pricePerNight   Float
+  images          String[]
+  hotelId         Int
+  hotel           Hotel    @relation(fields: [hotelId], references: [id])
+  bookings        Booking[]
+  availableDates  AvailableDate[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AvailableDate {
+  id        Int      @id @default(autoincrement())
+  roomId    Int
+  room      Room     @relation(fields: [roomId], references: [id])
+  date      DateTime
+  isBooked  Boolean @default(false)
+}
+
+model Booking {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  itinerary  ItineraryType // FLIGHT_ONEWAY, FLIGHT_ROUNDTRIP, HOTEL_RESERVATION
+  checkIn    DateTime?
+  checkOut   DateTime?
+  roomId     Int?
+  room       Room?    @relation(fields: [roomId], references: [id])
+  status     BookingStatus @default(PENDING)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model PaymentCard {
+  id          Int    @id @default(autoincrement())
+  userId      Int
+  user        User   @relation(fields: [userId], references: [id])
+  cardNumber  String
+  expiryMonth Int
+  expiryYear  Int
+  cvv         String
+  createdAt   DateTime @default(now())
+}
+
+enum Role {
+  REGULAR_USER
+  HOTEL_OWNER
+}
+
+enum ItineraryType {
+  FLIGHT_ONEWAY
+  FLIGHT_ROUNDTRIP
+  HOTEL_RESERVATION
+}
